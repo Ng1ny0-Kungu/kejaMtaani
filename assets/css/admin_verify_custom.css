@@ -1,0 +1,44 @@
+/* Custom tweaks for the Admin Review layout */
+.edit-container {
+    max-width: 1200px;
+    margin: 0 auto 40px auto;
+    align-items: flex-start;
+}
+
+.media-section {
+    max-height: 800px;
+    overflow-y: auto; /* Allow scrolling through many images on the left */
+    padding-right: 15px;
+}
+
+.media-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); /* Slightly smaller for review */
+}
+
+.form-section h2 {
+    color: #1e2a38;
+    margin-bottom: 25px;
+    font-size: 22px;
+    border-bottom: 2px solid #00bcd4;
+    display: inline-block;
+}
+
+.profile-grid h4 {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 2px;
+}
+
+.profile-grid p {
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+/* Ensure buttons look like buttons even though they are inside forms */
+.btn-primary, .btn-logout {
+    text-align: center;
+    font-size: 16px;
+    padding: 12px;
+}
