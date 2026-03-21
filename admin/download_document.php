@@ -26,9 +26,9 @@ if (!$document) {
     exit('File not found');
 }
 
-$filePath = __DIR__ . '/../uploads/verification_docs' . $document['document_path'];
+$file_path = __DIR__ . '/../uploads/verification_docs/' . $document['document_path'];
 
-if (!file_exists($filePath)) {
+if (!file_exists($file_path)) {
     exit('File missing on server');
 }
 
@@ -44,6 +44,6 @@ if (empty($downloadName)) {
 header('Content-Description: File Transfer');
 header('Content-Type: application/octet-stream');
 header('Content-Disposition: attachment; filename="' . $downloadName . '"');
-header('Content-Length: ' . filesize($filePath));
-readfile($filePath);
+header('Content-Length: ' . filesize($file_path));
+readfile($file_path);
 exit;

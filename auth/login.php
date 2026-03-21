@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             
             if ($user['user_type'] === 'tenant') {
-                header('Location: ../dashboard/tenant_dashboard.php');
+                header('Location: ../tenant/tenant_dashboard.php'); 
             } else {
                 header('Location: ../dashboard/landlord_dashboard.php');
             }

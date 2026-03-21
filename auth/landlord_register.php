@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth_functions.php';
+// require_once __DIR__ . '/../includes/mail_functions.php'; // Uncomment when PHPMailer is ready
 
 redirectIfLoggedInUserOnly();
 
@@ -16,7 +17,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password    = $_POST['password'] ?? '';
     $confirm     = $_POST['confirm_password'] ?? '';
 
-    
     if (strlen($full_name) < 3) $errors['full_name'] = 'Full name is required';
     if (!validateEmail($email)) $errors['email'] = 'Invalid email address';
     elseif (emailExists($db, $email)) $errors['email'] = 'Email already registered';
@@ -28,10 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!validatePassword($password)) $errors['password'] = 'Password must be at least 8 characters';
     if ($password !== $confirm) $errors['confirm'] = 'Passwords do not match';
     
-    
     if (empty($_FILES['documents']['name'][0])) $errors['documents'] = 'At least one document is required';
 
-    
     if (empty($errors)) {
         try {
             $db->beginTransaction();
@@ -44,7 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $verification_token = bin2hex(random_bytes(32));
             $token_expiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
-            
             $stmt = $db->prepare("
                 INSERT INTO users (email, phone_number, password_hash, first_name, last_name, user_type, is_verified, verification_token, token_expiry, last_login, is_active) 
                 VALUES (:email, :phone, :password, :first, :last, 'landlord', 0, :token, :expiry, NOW(), 1)
@@ -53,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([
                 ':email'    => $email,
                 ':phone'    => $phone,
-                ':password' => $password_hash,
+                ':password' => $password_hash, 
                 ':first'    => $first,
                 ':last'     => $last,
                 ':token'    => $verification_token,
@@ -62,11 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $user_id = $db->lastInsertId();
 
-            
             $stmtProfile = $db->prepare("INSERT INTO landlord_profiles (user_id, full_name, national_id) VALUES (:uid, :fname, :nid)");
             $stmtProfile->execute([':uid' => $user_id, ':fname' => $full_name, ':nid' => $national_id]);
 
-            // 3. Handle Document Uploads
             $upload_dir = __DIR__ . '/../uploads/verification_docs/';
             if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
 
@@ -80,17 +75,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            
             $db->commit();
+
+
+            $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $otp_hash = password_hash($otp, PASSWORD_DEFAULT);
+            $expiry = date('Y-m-d H:i:s', strtotime('+10 hours'));
+
+            $stmtOtp = $db->prepare("UPDATE users SET otp_hash = ?, otp_expiry = ?, otp_status = 'sent' WHERE user_id = ?");
+            $stmtOtp->execute([$otp_hash, $expiry, $user_id]);
+
+
+            require_once __DIR__ . '/../config/mail_config.php';
+            sendVerificationEmail($email, $first, $otp); 
+
             $_SESSION['user_id'] = $user_id;
             $_SESSION['user_type'] = 'landlord';
+            $_SESSION['email'] = $email;
 
-            header('Location: verify_account.php');
+            header('Location: verify_account.php?sent=1');
             exit;
 
-
         } catch (Throwable $e) {
-            $db->rollBack();
-            
+            if ($db->inTransaction()) $db->rollBack();
             $errors['general'] = "Database Error: " . $e->getMessage(); 
         }
     }
@@ -105,9 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="../assets/css/auth.css">
 </head>
 <body class="auth-bg">
-
 <div class="auth-container">
-
     <div class="auth-card">
         <div class="auth-header">
             <img src="../assets/images/logo.png" alt="kejaMtaani logo">
@@ -117,34 +123,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <form method="POST" enctype="multipart/form-data" class="auth-form">
             <?php if (!empty($errors)): ?>
-                    <div style="background: #fee; color: #b00; padding: 10px; margin-bottom: 20px; border-radius: 5px; border: 1px solid #fcc;">
-                     <strong>Please fix the following:</strong>
-                        <ul style="margin-top: 5px;">
-                            <?php foreach ($errors as $error): ?>
-                               <li><?php echo $error; ?></li>
-                            <?php endforeach; ?>
-                        </ul>
-                    </div>
+                <div style="background: #fee; color: #b00; padding: 10px; margin-bottom: 20px; border-radius: 5px; border: 1px solid #fcc;">
+                    <strong>Please fix the following:</strong>
+                    <ul style="margin-top: 5px;">
+                        <?php foreach ($errors as $error): ?>
+                            <li><?php echo $error; ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
             <?php endif; ?>
 
             <div class="form-group">
                 <label>Full Name</label>
-                <input type="text" name="full_name" required>
+                <input type="text" name="full_name" value="<?= htmlspecialchars($_POST['full_name'] ?? '') ?>" required>
             </div>
 
             <div class="form-group">
                 <label>National ID Number</label>
-                <input type="text" name="national_id" required>
+                <input type="text" name="national_id" value="<?= htmlspecialchars($_POST['national_id'] ?? '') ?>" required>
             </div>
 
             <div class="form-group">
                 <label>Email Address</label>
-                <input type="email" name="email" placeholder="example@gmail.com" required>
+                <input type="email" name="email" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" placeholder="example@gmail.com" required>
             </div>
 
             <div class="form-group">
                 <label>Phone Number</label>
-                <input type="text" name="phone" placeholder="07xxxxxxxx" required>
+                <input type="text" name="phone" value="<?= htmlspecialchars($_POST['phone'] ?? '') ?>" placeholder="07xxxxxxxx" required>
             </div>
 
             <div class="form-row">
@@ -152,7 +158,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label>Password</label>
                     <input type="password" name="password" required>
                 </div>
-
                 <div class="form-group">
                     <label>Confirm Password</label>
                     <input type="password" name="confirm_password" required>
@@ -161,24 +166,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="upload-box">
                 <label>Upload Utility Documents</label>
-                <p>Accepted: Images or PDF: <br>Electricity Bill Receipt Photos, Water  Bill Receipt Photos or Rent receipts</p>
+                <p>Accepted: Images or PDF: <br>Electricity Bill, Water Bill or Rent receipts</p>
                 <input type="file" name="documents[]" multiple accept="image/*,.pdf">
             </div>
 
-            <button type="submit" class="btn-primary">
-                Verify Account
-            </button>
+            <button type="submit" class="btn-primary">Verify Account</button>
 
             <div class="auth-footer">
-                <p>Already have an account?
-                    <a href="login.php">Login</a>
-                </p>
+                <p>Already have an account? <a href="login.php">Login</a></p>
             </div>
-
         </form>
     </div>
-
 </div>
-
 </body>
 </html>

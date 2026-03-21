@@ -92,12 +92,12 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'landlord') {
 
     <div class="form-group">
         <label>Constituency</label>
-        <input type="text" name="constituency" placeholder="e.g. Roysambu">
+        <input type="text" name="constituency" placeholder="e.g. Roysambu" required>
     </div>
 
     <div class="form-group">
         <label>Ward</label>
-        <input type="text" name="ward" placeholder="e.g. Roysambu">
+        <input type="text" name="ward" placeholder="e.g. Roysambu" required>
     </div>
 
     <div class="form-group">

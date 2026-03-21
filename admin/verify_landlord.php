@@ -13,21 +13,25 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 $db = (new Database())->getConnection();
 $userId = (int) $_GET['id'];
 
+// --- Handle Approval Logic ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['approve'])) {
-        $stmt = $db->prepare("UPDATE users SET is_verified = 1 WHERE user_id = ? AND user_type = 'landlord'");
+        // Final Step: Set is_verified to 1 and ensure otp_status is marked as passed
+        $stmt = $db->prepare("UPDATE users SET is_verified = 1, is_active = 1 WHERE user_id = ? AND user_type = 'landlord'");
         $stmt->execute([$userId]);
     }
 
     if (isset($_POST['reject'])) {
+        // Reset verification but keep account active for re-uploading/re-trying
         $stmt = $db->prepare("UPDATE users SET is_verified = 0 WHERE user_id = ? AND user_type = 'landlord'");
         $stmt->execute([$userId]);
     }
 
-    header("Location: admin_dashboard.php");
+    header("Location: admin_dashboard.php?action=success");
     exit;
 }
 
+// --- Fetch Landlord Details ---
 $stmt = $db->prepare("
     SELECT u.user_id, u.email, u.phone_number, u.is_verified, 
            lp.full_name, lp.national_id, u.otp_status, u.otp_expiry
@@ -37,12 +41,13 @@ $stmt = $db->prepare("
     LIMIT 1
 ");
 $stmt->execute([$userId]);
-$landlord = $stmt->fetch();
+$landlord = $stmt->fetch(); 
 
 if (!$landlord) {
     exit('Landlord not found');
 }
 
+// --- Fetch Documents ---
 $docsStmt = $db->prepare("
     SELECT document_id, document_type, document_path, document_name, 
            verification_status, rejection_reason, uploaded_at
@@ -87,11 +92,11 @@ $documents = $docsStmt->fetchAll();
             <p><strong>Phone:</strong> <?= htmlspecialchars($landlord['phone_number']) ?></p>
             <p><strong>ID Number:</strong> <?= htmlspecialchars($landlord['national_id']) ?></p>
             <p>
-                <strong>Status:</strong>
+                <strong>Verification Status:</strong>
                 <?php if ($landlord['is_verified']): ?>
-                    <span class="badge verified">Verified</span>
+                    <span class="badge verified" style="background:#2e7d32; color:white; padding:4px 8px; border-radius:4px;">✔ Fully Verified</span>
                 <?php else: ?>
-                    <span class="badge pending">Pending</span>
+                    <span class="badge pending" style="background:#f57c00; color:white; padding:4px 8px; border-radius:4px;">Pending Admin Approval</span>
                 <?php endif; ?>
             </p>
         </div>
@@ -101,19 +106,8 @@ $documents = $docsStmt->fetchAll();
             <?php if ($documents): ?>
                 <div class="documents-grid">
                     <?php foreach ($documents as $doc): ?>
-                        <div class="document-card">
-                            <p><strong>Type:</strong> <?= htmlspecialchars($doc['document_type']) ?></p>
+                        <div class="document-card" style="border:1px solid #ddd; padding:15px; border-radius:8px; margin-bottom:10px;">
                             <p><strong>Uploaded:</strong> <?= htmlspecialchars($doc['uploaded_at']) ?></p>
-                            <p>
-                                <strong>Status:</strong>
-                                <span class="badge <?= $doc['verification_status'] ?>">
-                                    <?= ucfirst($doc['verification_status']) ?>
-                                </span>
-                            </p>
-                            <?php if ($doc['rejection_reason']): ?>
-                                <p><strong>Reason:</strong> <?= htmlspecialchars($doc['rejection_reason']) ?></p>
-                            <?php endif; ?>
-
                             <?php
                             $displayName = $doc['document_name'];
                             if (empty($displayName)) {
@@ -123,8 +117,8 @@ $documents = $docsStmt->fetchAll();
                             ?>
                             <p><strong>File:</strong> <?= htmlspecialchars($displayName) ?></p>
                             <a href="download_document.php?id=<?= $doc['document_id'] ?>" 
-                               class="verify-btn" style="text-decoration:none; display:inline-block; margin-top:8px;">
-                                Download
+                               class="verify-btn" style="text-decoration:none; display:inline-block; margin-top:8px; background:#2196F3; color:white; padding:5px 12px; border-radius:4px;">
+                                View / Download Document
                             </a>
                         </div>
                     <?php endforeach; ?>
@@ -134,43 +128,35 @@ $documents = $docsStmt->fetchAll();
             <?php endif; ?>
         </div>
 
-        <div class="action-links">
+        <div class="action-links" style="border-top:1px solid #eee; pt:20px;">
             <?php if ($landlord['is_verified']): ?>
-                <span class="badge verified">✔ Fully Verified</span>
+                <div style="background:#e8f5e9; padding:15px; border-radius:8px; border:1px solid #c8e6c9;">
+                    <p style="color:#2e7d32; margin:0;"><strong>Account Verified:</strong> This landlord has full access to their dashboard.</p>
+                </div>
                 <form method="POST" style="margin-top:15px;">
-                    <button type="submit" name="reject" class="verify-btn" style="background:#c62828;">
-                        Undo Verification
+                    <button type="submit" name="reject" class="verify-btn" style="background:#c62828; border:none; color:white; padding:10px 20px; border-radius:5px; cursor:pointer;">
+                        Revoke Verification (Undo)
                     </button>
                 </form>
 
             <?php elseif ($landlord['otp_status'] === 'passed'): ?>
-                <div class="status-alert success">
-                    <p><strong>Landlord verified the OTP!</strong> You can now grant the badge.</p>
+                <div style="background:#fff3e0; padding:15px; border-radius:8px; border:1px solid #ffe0b2; margin-bottom:15px;">
+                    <p style="color:#e65100; margin:0;"><strong>Step 1 Complete:</strong> The landlord successfully verified their email via OTP.</p>
                 </div>
-                <a href="final_approve.php?id=<?= $landlord['user_id'] ?>" 
-                   class="verify-btn" style="display:inline-block; margin-top:15px;">
-                    Grant Badge & Finalize Approval
-                </a>
+                
+                <form method="POST">
+                    <button type="submit" name="approve" class="verify-btn" style="background:#2e7d32; border:none; color:white; padding:12px 24px; border-radius:5px; cursor:pointer; font-weight:bold;">
+                        Grant Verified Badge & Approve Account
+                    </button>
+                </form>
 
             <?php elseif ($landlord['otp_status'] === 'sent'): ?>
-                <span class="badge info">OTP Sent (Wait for Landlord Entry)</span>
-                <div style="margin-top:15px;">
-                    <a href="send_otp.php?id=<?= $landlord['user_id'] ?>" 
-                       class="verify-btn" style="background:#6c757d; display:inline-block;">
-                        Resend OTP
-                    </a>
-                </div>
-
-            <?php elseif ($landlord['otp_status'] === 'requested'): ?>
-                <span class="badge badge-warning">Landlord Requested OTP</span>
-                <div style="margin-top:15px;">
-                    <a href="send_otp.php?id=<?= $landlord['user_id'] ?>" class="verify-btn">
-                        Send OTP
-                    </a>
+                <div style="background:#eceff1; padding:15px; border-radius:8px; border:1px solid #cfd8dc;">
+                    <p style="color:#455a64; margin:0;"><strong>Waiting for Landlord:</strong> OTP has been sent. The landlord must enter the code before you can finalize approval.</p>
                 </div>
 
             <?php else: ?>
-                <span class="badge badge-secondary">No OTP Request Yet</span>
+                <span class="badge" style="background:#9e9e9e; color:white; padding:5px 10px; border-radius:4px;">No OTP Action Recorded</span>
             <?php endif; ?>
         </div>
     </div>

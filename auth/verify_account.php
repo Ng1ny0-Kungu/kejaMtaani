@@ -14,19 +14,15 @@ $message = "";
 $error = "";
 
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_otp'])) {
-
-    $stmt = $db->prepare("
-        UPDATE users 
-        SET otp_status = 'requested'
-        WHERE user_id = ?
-          AND is_verified = 0
-    ");
-    $stmt->execute([$user_id]);
-
-    $message = "OTP request submitted. Please wait for admin to send the code to your email.";
+if (isset($_GET['resent'])) {
+    $message = "A new verification code has been sent to your email.";
 }
-
+if (isset($_GET['error']) && $_GET['error'] === 'wrong_otp') {
+    $error = "The OTP you entered is incorrect. Please try again.";
+}
+if (isset($_GET['error']) && $_GET['error'] === 'expired') {
+    $error = "Your OTP has expired. Please request a new one below.";
+}
 
 $stmt = $db->prepare("
     SELECT is_verified, otp_status 
@@ -41,7 +37,6 @@ if (!$user) {
     header('Location: login.php?role=landlord');
     exit;
 }
-
 
 if ($user['is_verified']) {
     header('Location: ../dashboard/landlord_dashboard.php');
@@ -62,40 +57,33 @@ if ($user['is_verified']) {
 
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h2>Account Verification</h2>
-
-            
         </div>
 
         <hr>
 
-        <p>
-            Please press the button below  to request an OTP and then check your email for a verification code sent from:<br>
-            <strong>iam.kejamtaani@gmail.com</strong>
-            <?php if ($user['otp_status'] === 'none'): ?>
-                <form method="POST" style="margin:0;">
-                    <button type="submit" name="request_otp" class="btn-primary">
-                        Request OTP
-                    </button>
-                </form>
-            <?php endif; ?>
-        </p>
-
         <?php if (!empty($message)): ?>
-            <p style="color: green; margin-top:10px;">
+            <p style="color: green; background: #e8f5e9; padding: 10px; border-radius: 4px;">
                 <?= htmlspecialchars($message) ?>
             </p>
         <?php endif; ?>
 
-        <?php if ($user['otp_status'] === 'sent'): ?>
+        <?php if (!empty($error)): ?>
+            <p style="color: #c62828; background: #ffebee; padding: 10px; border-radius: 4px;">
+                <?= htmlspecialchars($error) ?>
+            </p>
+        <?php endif; ?>
 
-            <p style="color: orange;">
-                OTP has been sent to your email. Please enter it below.
+        <?php if ($user['otp_status'] === 'sent' || $user['otp_status'] === 'none'): ?>
+            <p>
+                Please check your email (<strong><?= htmlspecialchars($_SESSION['email'] ?? 'your registered email') ?></strong>) for a 6-digit verification code sent from:<br>
+                <strong>iam.kejamtaani@gmail.com</strong>
             </p>
 
-            <form method="POST" action="process_landlord_otp.php">
+            <form method="POST" action="process_landlord_otp.php" style="margin-top: 20px;">
                 <div class="form-group">
-                    <label>Enter OTP</label>
-                    <input type="text" name="otp_code" required>
+                    <label>Enter OTP Code</label>
+                    <input type="text" name="otp_code" placeholder="000000" maxlength="6" required 
+                           style="letter-spacing: 5px; font-size: 1.2rem; text-align: center;">
                 </div>
 
                 <button type="submit" class="btn-primary">
@@ -103,17 +91,31 @@ if ($user['is_verified']) {
                 </button>
             </form>
 
-        <?php elseif ($user['otp_status'] === 'passed'): ?>
-
-            <p style="color: green;">
-                OTP submitted successfully.<br>
-                Awaiting admin approval.
+            <p style="margin-top: 25px; font-size: 0.9em;">
+                Didn't receive the code? 
+                <a href="request_otp.php" style="color: #2196F3; text-decoration: none; font-weight: bold;">Resend OTP</a>
             </p>
 
+        <?php elseif ($user['otp_status'] === 'passed'): ?>
+
+            <div style="text-align: center; padding: 20px 0;">
+                <div style="color: green; font-size: 1.1em; margin-bottom: 15px;">
+                    <strong>✔ OTP Verified Successfully</strong>
+                </div>
+                <p>
+                    Your account is now <strong>awaiting admin approval</strong>. <br>
+                    We are reviewing your uploaded documents. You will receive an email once your dashboard is activated.
+                </p>
+            </div>
+
+        <?php elseif ($user['otp_status'] === 'blocked'): ?>
+            <p style="color: #c62828;">
+                <strong>Account Suspended:</strong> Too many incorrect OTP attempts. Please contact support at iam.kejamtaani@gmail.com.
+            </p>
         <?php endif; ?>
 
-        <br>
-        <a href="logout.php">Logout</a>
+        <hr style="margin: 20px 0;">
+        <a href="logout.php" style="color: #666; text-decoration: none;">Logout</a>
 
     </div>
 </div>
