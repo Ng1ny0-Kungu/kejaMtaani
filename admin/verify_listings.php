@@ -40,6 +40,7 @@ $listings = $listingsStmt->fetchAll();
         .approved { background: #27ae60; color: white; }
         .rejected { background: #e74c3c; color: white; }
     </style>
+    <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 </head>
 <body>
 

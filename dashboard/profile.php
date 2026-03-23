@@ -33,6 +33,7 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
     <title>Profile | kejaMtaani</title>
     <link rel="stylesheet" href="../assets/css/landlord.css">
     <link rel="stylesheet" href="../assets/css/profile_custom.css">
+    <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 </head>
 <body>
 

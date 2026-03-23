@@ -1,4 +1,4 @@
-/* Custom tweaks for the Admin Review layout */
+
 .edit-container {
     max-width: 1200px;
     margin: 0 auto 40px auto;
@@ -7,12 +7,12 @@
 
 .media-section {
     max-height: 800px;
-    overflow-y: auto; /* Allow scrolling through many images on the left */
+    overflow-y: auto; 
     padding-right: 15px;
 }
 
 .media-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); /* Slightly smaller for review */
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); 
 }
 
 .form-section h2 {
@@ -36,9 +36,58 @@
     margin-bottom: 15px;
 }
 
-/* Ensure buttons look like buttons even though they are inside forms */
+
 .btn-primary, .btn-logout {
     text-align: center;
     font-size: 16px;
     padding: 12px;
+}
+
+.auth-container, .admin-wrapper {
+    width: 100%;
+    max-width: 1200px; 
+    margin: 0 auto;
+    padding: 15px; 
+    box-sizing: border-box;
+}
+
+
+.auth-card {
+    width: 100%;
+    max-width: 450px; 
+    margin: 20px auto;
+    box-sizing: border-box;
+}
+
+
+.form-row {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap; 
+}
+
+.form-row .form-group {
+    flex: 1;
+    min-width: 200px; 
+}
+
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+@media (max-width: 768px) {
+    h1 {
+        font-size: 1.5rem; 
+    }
+    
+    .admin-nav .nav-content {
+        flex-direction: column; 
+        text-align: center;
+    }
+
+    .documents-grid {
+        grid-template-columns: 1fr; 
+    }
 }

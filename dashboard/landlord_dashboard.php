@@ -47,6 +47,7 @@ $stats = $statsStmt->fetch();
 <head>
     <title>Landlord Dashboard | kejaMtaani</title>
     <link rel="stylesheet" href="../assets/css/landlord.css">
+    <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 </head>
 <body>
 

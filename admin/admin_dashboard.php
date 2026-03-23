@@ -60,6 +60,7 @@ $tenants = $db->query("
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard | kejaMtaani</title>
     <link rel="stylesheet" href="../assets/css/admin.css">
+    <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 </head>
 <body class="admin-bg">
 

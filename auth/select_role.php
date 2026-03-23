@@ -15,6 +15,7 @@ $isLogin = ($mode === 'login');
     <meta charset="UTF-8">
     <title>Select Role | kejaMtaani</title>
     <link rel="stylesheet" href="../assets/css/role.css">
+    <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 </head>
 <body>
 

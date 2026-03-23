@@ -15,6 +15,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'landlord') {
     <link rel="stylesheet" href="../assets/css/landlord.css">
     <script defer src="../assets/js/property_form.js"></script>
     <script defer src="../assets/js/property_map.js"></script>
+    <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 </head>
 <body>
 

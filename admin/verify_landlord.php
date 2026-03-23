@@ -2,6 +2,8 @@
 session_start();
 require_once __DIR__ . '/../config/database.php';
 
+require_once __DIR__ . '/../config/mail_config.php';
+
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
     exit('Unauthorized');
 }
@@ -16,13 +18,29 @@ $userId = (int) $_GET['id'];
 // --- Handle Approval Logic ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['approve'])) {
-        // Final Step: Set is_verified to 1 and ensure otp_status is marked as passed
+        
+        $stmtDetails = $db->prepare("
+            SELECT u.email, lp.full_name 
+            FROM users u 
+            JOIN landlord_profiles lp ON u.user_id = lp.user_id 
+            WHERE u.user_id = ?
+        ");
+        $stmtDetails->execute([$userId]);
+        $userToNotify = $stmtDetails->fetch();
+
+        
         $stmt = $db->prepare("UPDATE users SET is_verified = 1, is_active = 1 WHERE user_id = ? AND user_type = 'landlord'");
-        $stmt->execute([$userId]);
+        
+        if ($stmt->execute([$userId])) {
+            
+            if ($userToNotify) {
+                sendApprovalEmail($userToNotify['email'], $userToNotify['full_name']);
+            }
+        }
     }
 
     if (isset($_POST['reject'])) {
-        // Reset verification but keep account active for re-uploading/re-trying
+        
         $stmt = $db->prepare("UPDATE users SET is_verified = 0 WHERE user_id = ? AND user_type = 'landlord'");
         $stmt->execute([$userId]);
     }
@@ -31,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// --- Fetch Landlord Details ---
+
 $stmt = $db->prepare("
     SELECT u.user_id, u.email, u.phone_number, u.is_verified, 
            lp.full_name, lp.national_id, u.otp_status, u.otp_expiry
@@ -47,7 +65,7 @@ if (!$landlord) {
     exit('Landlord not found');
 }
 
-// --- Fetch Documents ---
+
 $docsStmt = $db->prepare("
     SELECT document_id, document_type, document_path, document_name, 
            verification_status, rejection_reason, uploaded_at
@@ -65,6 +83,7 @@ $documents = $docsStmt->fetchAll();
     <meta charset="UTF-8">
     <title>Verify Landlord | kejaMtaani Admin</title>
     <link rel="stylesheet" href="../assets/css/admin.css">
+    <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 </head>
 <body class="admin-bg">
 
@@ -128,10 +147,10 @@ $documents = $docsStmt->fetchAll();
             <?php endif; ?>
         </div>
 
-        <div class="action-links" style="border-top:1px solid #eee; pt:20px;">
+        <div class="action-links" style="border-top:1px solid #eee; padding-top:20px;">
             <?php if ($landlord['is_verified']): ?>
                 <div style="background:#e8f5e9; padding:15px; border-radius:8px; border:1px solid #c8e6c9;">
-                    <p style="color:#2e7d32; margin:0;"><strong>Account Verified:</strong> This landlord has full access to their dashboard.</p>
+                    <p style="color:#2e7d32; margin:0;"><strong>Account Verified:</strong> An activation email has been sent to the landlord.</p>
                 </div>
                 <form method="POST" style="margin-top:15px;">
                     <button type="submit" name="reject" class="verify-btn" style="background:#c62828; border:none; color:white; padding:10px 20px; border-radius:5px; cursor:pointer;">
@@ -159,7 +178,7 @@ $documents = $docsStmt->fetchAll();
                 <span class="badge" style="background:#9e9e9e; color:white; padding:5px 10px; border-radius:4px;">No OTP Action Recorded</span>
             <?php endif; ?>
         </div>
-    </div>
+    </div> 
 </div>
 
 </body>

@@ -49,6 +49,7 @@ if ($user['is_verified']) {
 <head>
     <title>Verify Account | kejaMtaani</title>
     <link rel="stylesheet" href="../assets/css/auth.css">
+    <link rel="icon" type="image/png" href="../assets/images/favicon.png">
 </head>
 <body class="auth-bg">
 

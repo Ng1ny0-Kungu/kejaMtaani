@@ -176,14 +176,52 @@ footer {
     opacity: 0.85;
 }
 
-/* RESPONSIVE */
-@media (max-width: 900px) {
-    header {
-        padding: 20px 40px;
+
+.auth-container, .admin-wrapper {
+    width: 100%;
+    max-width: 1200px; 
+    margin: 0 auto;
+    padding: 15px; 
+    box-sizing: border-box;
+}
+
+
+.auth-card {
+    width: 100%;
+    max-width: 450px; 
+    margin: 20px auto;
+    box-sizing: border-box;
+}
+
+
+.form-row {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap; 
+}
+
+.form-row .form-group {
+    flex: 1;
+    min-width: 200px; 
+}
+
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+@media (max-width: 768px) {
+    h1 {
+        font-size: 1.5rem; 
+    }
+    
+    .admin-nav .nav-content {
+        flex-direction: column; 
+        text-align: center;
     }
 
-    .container {
-        grid-template-columns: 1fr;
-        padding: 40px;
+    .documents-grid {
+        grid-template-columns: 1fr; 
     }
 }
